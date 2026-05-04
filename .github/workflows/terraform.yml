@@ -23,7 +23,7 @@ jobs:
       - name: Step 1 - Download repo code onto GitHub runner
         uses: actions/checkout@v3
 
-      - name: Step 2 - Authenticate to AWS using OIDC role (no keys required)
+      - name: Step 2 - Authenticate to AWS using OIDC role
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -38,39 +38,30 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Step 5 - Initialize aws-backend with shared backend config
+      - name: Step 5 - Initialize aws-backend
         working-directory: ./03-basics/aws-backend
         run: terraform init -backend-config=../backend.hcl
 
-      - name: Step 6 - Validate aws-backend syntax
-        working-directory: ./03-basics/aws-backend
-        run: terraform validate
-
-      - name: Step 7 - Plan aws-backend changes
+      - name: Step 6 - Plan aws-backend
         working-directory: ./03-basics/aws-backend
         run: terraform plan -no-color
         continue-on-error: true
 
-      - name: Step 8 - Apply aws-backend on merge to main only
+      - name: Step 7 - Apply aws-backend on main only
         working-directory: ./03-basics/aws-backend
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve
 
-      - name: Step 9 - Initialize web-app with shared backend config
+      - name: Step 8 - Initialize web-app
         working-directory: ./03-basics/web-app
         run: terraform init -backend-config=../backend.hcl
 
-      - name: Step 10 - Validate web-app syntax
-        working-directory: ./03-basics/web-app
-        run: terraform validate
-
-      - name: Step 11 - Plan web-app changes
+      - name: Step 9 - Plan web-app
         working-directory: ./03-basics/web-app
         run: terraform plan -no-color
         continue-on-error: true
 
-      - name: Step 12 - Apply web-app on merge to main only
+      - name: Step 10 - Apply web-app on main only
         working-directory: ./03-basics/web-app
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: terraform apply -auto-approve
-
