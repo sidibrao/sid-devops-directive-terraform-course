@@ -1,0 +1,55 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type DESTROY to confirm you want to destroy all resources"
+        required: true
+
+env:
+  TF_VERSION: 1.10.0
+
+jobs:
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+
+      - name: Step 1 - Confirm destroy input
+        if: github.event.inputs.confirm != 'DESTROY'
+        run: |
+          echo "You must type DESTROY to confirm. Stopping."
+          exit 1
+
+      - name: Step 2 - Download repo code
+        uses: actions/checkout@v4
+
+      - name: Step 3 - Authenticate to AWS using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-DestroySession
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Step 4 - Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Step 5 - Destroy web-app first
+        working-directory: ./03-basics/web-app
+        run: |
+          terraform init -backend-config=../backend.hcl
+          terraform destroy -auto-approve
+
+      - name: Step 6 - Destroy aws-backend second
+        working-directory: ./03-basics/aws-backend
+        run: |
+          terraform init -backend-config=../backend.hcl
+          terraform destroy -auto-approve
